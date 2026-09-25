@@ -282,6 +282,7 @@
             <select value={$locale} onchange={(e) => locale.set(e.currentTarget.value as Locale)} class="mt-2 block w-full rounded-lg border border-gray-300 p-2 bg-white dark:bg-gray-700 dark:border-gray-600">
               <option value="en" lang="en">English</option>
               <option value="pt" lang="pt">Português</option>
+              <option value="ru" lang="ru">Русский</option>
             </select>
           </label>
           <div class="space-y-4">

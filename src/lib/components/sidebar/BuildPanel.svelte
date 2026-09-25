@@ -6,7 +6,6 @@
   import { roomPresetLabels, roomTemplateLabels } from '$lib/i18n/roomLabels';
   import { modalDialog } from '$lib/utils/modalDialog';
   import { openProject } from '$lib/services/projectOpening';
-  import ImportError from '$lib/components/ImportError.svelte';
   import { onDestroy } from 'svelte';
   import { activateMeasurementTool, selectedTool, placingFurnitureId, placingDoorType, placingWindowType, placingStair, addStair, placingColumn, placingColumnShape, activeFloor, setBackgroundImage, canvasCamX, canvasCamY, placingEntourageId, addCustomEntourage } from '$lib/stores/project';
   import type { Tool } from '$lib/stores/project';
@@ -18,27 +17,20 @@
   import type { FurnitureDef } from '$lib/utils/furnitureCatalog';
   import FurnitureThumbnail from './FurnitureThumbnail.svelte';
   import CustomModelPanel from './CustomModelPanel.svelte';
-  import { createProjectFromRoomPlan, extractRoomJsonFromZip, roomPlanImportOptions, validateRoomPlan, ORTHO_VERSION } from '$lib/utils/roomplanImport';
   import { currentProject } from '$lib/stores/project';
+  // Phase 1.3: doors, windows and stairs are residential-domain tools and stay off.
+  import { RESIDENTIAL_DOMAIN_ENABLED } from '$lib/planogram/domainTrim';
 
-  const openingLifetime = new AbortController();
-  onDestroy(() => openingLifetime.abort());
-
-  let importError = $state<string | null>(null);
-
-  // AreaSummaryPanel moved to top bar dialog
   let activeTab = $state<'draw' | 'rooms' | 'objects'>('draw');
   let constructionOpen = $state(true);
+  /** Residential openings/stairs UI is hidden while the residential domain is out. */
+  const residentialToolsEnabled = RESIDENTIAL_DOMAIN_ENABLED;
   let selectedCategory = $state<string>('All');
-  // RoomPlan import dialog state
-  let showImportDialog = $state(false);
-  let importFileName = $state('');
-  let importJsonData: any = $state(null);
-  let optStraighten = $state(true);
-  let optOrthogonal = $state(true);
-  let optMergeDistance = $state(15);
 
   function setTool(tool: Tool) {
+    // Phase 1.3: residential tools (door/window) are never activated while the
+    // residential domain is out — fall back to selection instead.
+    if (!residentialToolsEnabled && (tool === 'door' || tool === 'window')) tool = 'select';
     if (tool === 'measure' || tool === 'annotate') activateMeasurementTool(tool);
     else selectedTool.set(tool);
     placingFurnitureId.set(null);
@@ -240,63 +232,6 @@
     input.click();
   }
 
-  async function onImportRoomPlan() {
-    importError = null;
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,.zip';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      try {
-        let jsonData: any;
-        if (/\.zip$/i.test(file.name)) {
-          jsonData = await extractRoomJsonFromZip(file);
-        } else {
-          const text = await file.text();
-          jsonData = JSON.parse(text);
-        }
-        validateRoomPlan(jsonData);
-        const options = roomPlanImportOptions(jsonData);
-        optStraighten = options.straighten ?? true;
-        optOrthogonal = options.orthogonal ?? true;
-        optMergeDistance = options.mergeDistance ?? 15;
-        importJsonData = jsonData;
-        importFileName = file.name.replace(/\.(json|zip)$/, '');
-        showImportDialog = true;
-      } catch (e: any) {
-        importError = e.message;
-      }
-    };
-    input.click();
-  }
-
-  async function confirmImport() {
-    if (!importJsonData) return;
-    const input = importJsonData;
-    importError = null;
-    try {
-      // Create a new project for the imported data instead of merging into current
-      const projectName = importFileName ? importFileName.replace(/\.(json|zip)$/i, '') : 'RoomPlan Import';
-      await openProject(() => createProjectFromRoomPlan(input, projectName, {
-        straighten: optStraighten,
-        orthogonal: optOrthogonal,
-        mergeDistance: optMergeDistance,
-      }), 'import', openingLifetime.signal);
-    } catch (e: any) {
-      if (importJsonData === input) importError = e.message;
-    }
-    if (importJsonData === input) {
-      showImportDialog = false;
-      importJsonData = null;
-    }
-  }
-
-  function cancelImport() {
-    showImportDialog = false;
-    importJsonData = null;
-  }
-
   // --- Hover Preview Tooltip ---
   let hoveredItem = $state<FurnitureDef | null>(null);
   let hoverTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
@@ -396,19 +331,21 @@
           </div>
         </button>
 
-        <h3 class="text-xs font-semibold text-gray-400 uppercase mb-2 mt-3">{$t('buildTools.structure')}</h3>
-        <button
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {isPlacingStair ? 'bg-blue-50 text-slate-800 ring-1 ring-blue-200' : 'hover:bg-gray-50 text-gray-700'}"
-          onclick={onPlaceStair}
-        >
-          <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center {isPlacingStair ? 'bg-blue-100' : ''}">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 5h-5V2h-3v6h-4V5H7v6H2v3h5v3h3v-3h4v3h3v-6h5z"/></svg>
-          </div>
-          <div class="text-left">
-            <div class="font-medium">{$t('buildTools.stairs')}</div>
-            <div class="text-xs text-gray-400">{$t('buildTools.stairsHelp')}</div>
-          </div>
-        </button>
+        {#if residentialToolsEnabled}
+          <h3 class="text-xs font-semibold text-gray-400 uppercase mb-2 mt-3">{$t('buildTools.structure')}</h3>
+          <button
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {isPlacingStair ? 'bg-blue-50 text-slate-800 ring-1 ring-blue-200' : 'hover:bg-gray-50 text-gray-700'}"
+            onclick={onPlaceStair}
+          >
+            <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center {isPlacingStair ? 'bg-blue-100' : ''}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 5h-5V2h-3v6h-4V5H7v6H2v3h5v3h3v-3h4v3h3v-6h5z"/></svg>
+            </div>
+            <div class="text-left">
+              <div class="font-medium">{$t('buildTools.stairs')}</div>
+              <div class="text-xs text-gray-400">{$t('buildTools.stairsHelp')}</div>
+            </div>
+          </button>
+        {/if}
 
         <div class="flex gap-2">
           <button
@@ -487,19 +424,8 @@
             <div class="text-xs text-gray-400">{$t('buildTools.imageHelp')}</div>
           </div>
         </button>
-        <button
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-gray-50 text-gray-700"
-          onclick={onImportRoomPlan}
-        >
-          <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </div>
-          <div class="text-left">
-            <div class="font-medium">{$t('buildTools.roomplan')}</div>
-            <div class="text-xs text-gray-400">{$t('buildTools.roomplanHelp')}</div>
-          </div>
-        </button>
 
+        {#if residentialToolsEnabled}
         <button
           class="w-full flex items-center justify-between px-1 py-2 mt-3"
           onclick={() => constructionOpen = !constructionOpen}
@@ -543,6 +469,7 @@
               </button>
             {/each}
           </div>
+        {/if}
         {/if}
       </div>
 
@@ -783,44 +710,4 @@
   </div>
 {/if}
 
-<!-- RoomPlan Import Options Dialog -->
-{#if showImportDialog}
-  <dialog use:modalDialog class="modal-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center" aria-label={$t('roomPlanDialog.title')} onclick={(e) => { if (e.target === e.currentTarget) cancelImport(); }} oncancel={(e) => { e.preventDefault(); cancelImport(); }}>
-    <div class="bg-white rounded-xl shadow-2xl w-80 max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-auto p-5">
-      <h3 class="text-sm font-bold text-gray-800 mb-1">{$t('roomPlanDialog.title')}</h3>
-      <p class="text-xs text-gray-400 mb-4">{importFileName}</p>
-
-      <div class="space-y-3">
-        <label class="flex items-start gap-2.5 cursor-pointer">
-          <input type="checkbox" bind:checked={optStraighten} class="accent-blue-500 mt-0.5" />
-          <div>
-            <div class="text-sm font-medium text-gray-700">{$t('roomPlanDialog.straighten')}</div>
-            <div class="text-xs text-gray-400">{$t('roomPlanDialog.straightenHelp')}</div>
-          </div>
-        </label>
-
-        <label class="flex items-start gap-2.5 cursor-pointer">
-          <input type="checkbox" bind:checked={optOrthogonal} class="accent-blue-500 mt-0.5" />
-          <div>
-            <div class="text-sm font-medium text-gray-700">{$t('roomPlanDialog.orthogonal')} <span class="text-xs text-blue-400 font-mono">{ORTHO_VERSION}</span></div>
-            <div class="text-xs text-gray-400">{$t('roomPlanDialog.orthogonalHelp')}</div>
-          </div>
-        </label>
-
-        <label class="block">
-          <div class="text-xs text-gray-500 mb-1">{$t('roomPlanDialog.merge')}</div>
-          <input type="number" bind:value={optMergeDistance} min="0" max="50" step="5" class="w-full px-2 py-1 border border-gray-200 rounded text-sm" />
-        </label>
-      </div>
-
-      <div class="flex gap-2 mt-5">
-        <button onclick={cancelImport} class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">{$t('roomPlanDialog.cancel')}</button>
-        <button onclick={confirmImport} class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">{$t('roomPlanDialog.import')}</button>
-      </div>
-    </div>
-  </dialog>
-{/if}
-
-{#if importError}
-  <ImportError message={importError} onDismiss={() => importError = null} />
-{/if}
+<!-- RoomPlan Import Options Dialog removed in Phase 1.4 (Apple RoomPlan import is out of scope) -->

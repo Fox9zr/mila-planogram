@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { readProject } from '$lib/utils/projectValidation';
 import { houseTemplates } from '$lib/utils/houseTemplates';
-import { createProjectFromRoomPlan } from '$lib/utils/roomplanImport';
 import { roomProject } from './fixtures/project';
 
 function completeProject(): any {
@@ -41,10 +40,6 @@ describe('native project reader', () => {
   it.each(['connected-dimensions.openplan.json', 'sloped-walls.openplan.json'])('keeps %s stable after the first legacy migration', name => {
     const value = JSON.parse(readFileSync(`tests/fixtures/${name}`, 'utf8'));
     const loaded = readProject(value); expect(readProject(JSON.parse(JSON.stringify(loaded)))).toEqual(loaded);
-  });
-  it('accepts generated iPhone handoff geometry and preserves every floor', () => {
-    const source = createProjectFromRoomPlan(JSON.parse(readFileSync('tests/fixtures/handoff-roomplan.json', 'utf8')), 'iPhone');
-    expect(readProject(source)).toEqual(source);
   });
   it('migrates only missing legacy fields and keeps input bytes unchanged', () => {
     const source: any = { id: 'legacy', floors: [{ id: 'ground', walls: [{ id: 'wall', start: { x: 0, y: 0 }, end: { x: 250.75, y: 0 }, thickness: 15 }], doors: [{ id: 'door', wallId: 'wall', position: 0.5, width: 90.25 }] }] };

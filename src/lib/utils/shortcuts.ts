@@ -78,7 +78,8 @@ export function handleGlobalShortcut(e: KeyboardEvent, ctx: ShortcutContext = {}
     return true;
   }
   if (e.key === 'w' || e.key === 'W') { selectedTool.set('wall'); panMode.set(false); return true; }
-  if (e.key === 'd' || e.key === 'D') { selectedTool.set('door'); panMode.set(false); return true; }
+  // Phase 1.3: the residential door tool (and its D hotkey) is disabled — see
+  // $lib/planogram/domainTrim. No other residential tool has a hotkey.
   if (e.key === 'v' || e.key === 'V') { selectedTool.set('select'); panMode.set(false); return true; }
   if (e.key === 'h' || e.key === 'H') { panMode.set(true); return true; }
   if (e.key === 't' || e.key === 'T') { selectedTool.set('text'); panMode.set(false); return true; }

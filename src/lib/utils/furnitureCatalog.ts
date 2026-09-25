@@ -1,4 +1,5 @@
 import type { FurnitureItem } from '$lib/models/types';
+import { MILA_RACKS } from '$lib/planogram/equipmentCatalog';
 
 export interface FurnitureDef {
   id: string;
@@ -245,7 +246,25 @@ export const furnitureCatalog: FurnitureDef[] = [
   { id: 'sym_water_heater', name: 'Water Heater', category: 'Plumbing', icon: '🔥', color: '#ef4444', width: 20, depth: 20, height: 0, symbol: true },
   { id: 'sym_washer_hookup', name: 'Washer Hookup', category: 'Plumbing', icon: '🧺', color: '#0ea5e9', width: 15, depth: 15, height: 0, symbol: true },
   { id: 'sym_gas_line', name: 'Gas Line', category: 'Plumbing', icon: '⛽', color: '#f59e0b', width: 15, depth: 15, height: 0, symbol: true },
+
+  // Retail shelf units for Mila planograms (Phase 1.5). Sizes live in the planogram
+  // equipment catalog in millimetres and are converted here to catalog centimetres.
+  ...equipmentFurnitureDefs(),
 ];
+
+/** Retail equipment (Phase 1.5): millimetre specs converted to the catalog's centimetres. */
+export function equipmentFurnitureDefs(): FurnitureDef[] {
+  return MILA_RACKS.map((item) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    icon: '🗄️',
+    color: '#0f766e',
+    width: item.width_mm / 10,
+    depth: item.depth_mm / 10,
+    height: item.height_mm / 10,
+  }));
+}
 
 // Import previews stay out of the placement catalog and need no model downloads.
 const importPreviews: FurnitureDef[] = [
@@ -255,6 +274,26 @@ const importPreviews: FurnitureDef[] = [
 
 export function getCatalogItem(id: string): FurnitureDef | undefined {
   return furnitureCatalog.find(f => f.id === id) ?? importPreviews.find(f => f.id === id);
+}
+
+/**
+ * Runtime guard for UI code that must render something for an unknown id (e.g. a
+ * planogram referencing equipment the catalog no longer ships). Returns a neutral
+ * footprint instead of `undefined` so no component crashes on a stale reference.
+ */
+const unavailableFurniture: FurnitureDef = Object.freeze({
+  id: 'furniture_unavailable',
+  name: 'Оборудование не найдено',
+  category: 'Imported',
+  icon: '❓',
+  color: '#94a3b8',
+  width: 90,
+  depth: 40,
+  height: 180,
+});
+
+export function getCatalogItemOrPlaceholder(id: string): FurnitureDef {
+  return getCatalogItem(id) ?? unavailableFurniture;
 }
 
 /**

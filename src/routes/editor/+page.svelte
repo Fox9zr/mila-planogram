@@ -1,7 +1,6 @@
 <script lang="ts">
   import { t, locale } from '$lib/i18n';
   import { projectServiceMessage } from '$lib/i18n/projectServiceMessages';
-  import { CaptureImportError } from '$lib/i18n/captureImportError';
   import { modalDialog, hasOpenModal } from '$lib/utils/modalDialog';
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
@@ -12,7 +11,6 @@
   import { currentProject, viewMode, selectedElementId, selectedRoomId, createDefaultProject, loadProject, selectedTool, placingFurnitureId, elevationWallId, elevationPickMode } from '$lib/stores/project';
   import { localStore, storageErrorMessage, downloadLibraryBackup } from '$lib/services/datastore';
   import { autoSave, markClean, saveState } from '$lib/stores/saveStatus';
-  import { createProjectFromRoomPlan, isRoomPlanJson } from '$lib/utils/roomplanImport';
   import TopBar from '$lib/components/toolbar/TopBar.svelte';
   import BuildPanel from '$lib/components/sidebar/BuildPanel.svelte';
   import PropertiesPanel from '$lib/components/sidebar/PropertiesPanel.svelte';
@@ -65,55 +63,13 @@
   selectedTool.subscribe(() => { if (buildPanelOpen) buildPanelOpen = false; });
   placingFurnitureId.subscribe((id) => { if (id && buildPanelOpen) buildPanelOpen = false; });
 
-  // iOS capture handoff (?import=CODE → fetch RoomPlan JSON from Firebase Storage inbox)
-  let importingCapture = $state(false);
-  let importError = $state<string | CaptureImportError | null>(null);
+  // Phase 1.4: the iOS RoomPlan capture handoff (?import=CODE from Firebase
+  // Storage) was removed together with the Apple RoomPlan import.
   let loadError = $state<string | null>(null);
 
   async function backupLibrary() {
     try { await downloadLibraryBackup(); }
     catch (error) { loadError = storageErrorMessage(error); }
-  }
-
-  /** Fetch a RoomPlan capture uploaded by the iOS app and open it as a new project. Returns true on success. */
-  async function importCaptureFromCode(code: string): Promise<boolean> {
-    importingCapture = true;
-    try {
-      const url = `https://firebasestorage.googleapis.com/v0/b/openplan3d.firebasestorage.app/o/inbox%2F${code}.json?alt=media`;
-      let res: Response;
-      try {
-        res = await fetch(url);
-      } catch {
-        throw new CaptureImportError('captureImport.network');
-      }
-      if (res.status === 404) {
-        throw new CaptureImportError('captureImport.missing', { code });
-      }
-      if (!res.ok) {
-        throw new CaptureImportError('captureImport.http', { status: res.status });
-      }
-      let data: any;
-      try {
-        data = await res.json();
-      } catch {
-        throw new CaptureImportError('captureImport.json');
-      }
-      if (!isRoomPlanJson(data)) {
-        throw new CaptureImportError('captureImport.format');
-      }
-      const project = createProjectFromRoomPlan(data, `Room Capture ${code}`);
-      loadProject(project);
-      // A storage failure must not discard a successfully downloaded capture.
-      await autoSave();
-      // Remove ?import=CODE so a refresh doesn't re-import
-      replaceState(`${base}/editor?id=${project.id}`, page.state);
-      return true;
-    } catch (e: any) {
-      importError = e instanceof CaptureImportError ? e : e?.message ?? new CaptureImportError('captureImport.fallback');
-      return false;
-    } finally {
-      importingCapture = false;
-    }
   }
 
   viewMode.subscribe((m) => {
@@ -132,21 +88,6 @@
     loadError = null;
     try {
       const url = new URL(window.location.href);
-
-      // iOS capture handoff: ?import=CODE
-      const rawCode = url.searchParams.get('import');
-      if (rawCode) {
-        const code = rawCode.toUpperCase();
-        if (/^[A-Z2-9]{4,32}$/.test(code)) {
-          if (await importCaptureFromCode(code)) {
-            ready = true;
-            return;
-          }
-          // Import failed — fall through to the normal load flow (error shown via toast)
-        } else {
-          importError = new CaptureImportError('captureImport.code');
-        }
-      }
 
       const id = url.searchParams.get('id');
       if (id) {
@@ -183,7 +124,6 @@
       if (!ready || !project) return;
       const url = new URL(window.location.href);
       if (url.searchParams.get('id') === project.id) return;
-      url.searchParams.delete('import');
       url.searchParams.set('id', project.id);
       replaceState(url, page.state);
     });
@@ -337,7 +277,6 @@
                   '── ' + $t('shortcuts.tools') + ' ──',
                   "V          " + $t('shortcuts.select'),
                   "W          " + $t('shortcuts.wall'),
-                  "D          " + $t('shortcuts.door'),
                   "H          " + $t('shortcuts.pan'),
                   "M          " + $t('shortcuts.measure'),
                   "N          " + $t('shortcuts.annotate'),
@@ -406,7 +345,6 @@
               <div class="space-y-1.5 mb-5">
                 <div class="flex justify-between"><span class="text-gray-600">{$t('shortcuts.select')}</span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono text-slate-700 border border-gray-200">V</kbd></div>
                 <div class="flex justify-between"><span class="text-gray-600">{$t('shortcuts.wall')}</span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono text-slate-700 border border-gray-200">W</kbd></div>
-                <div class="flex justify-between"><span class="text-gray-600">{$t('shortcuts.door')}</span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono text-slate-700 border border-gray-200">D</kbd></div>
                 <div class="flex justify-between"><span class="text-gray-600">{$t('shortcuts.pan')}</span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono text-slate-700 border border-gray-200">H</kbd></div>
                 <div class="flex justify-between"><span class="text-gray-600">{$t('shortcuts.measure')}</span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono text-slate-700 border border-gray-200">M</kbd></div>
                 <div class="flex justify-between"><span class="text-gray-600">{$t('shortcuts.annotate')}</span><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono text-slate-700 border border-gray-200">N</kbd></div>
@@ -505,23 +443,8 @@
       <button class="text-blue-700 underline" onclick={initializeEditor}>{$t('library.retry')}</button>
       <button class="text-blue-700 underline" onclick={backupLibrary}>{$t('library.backup')}</button>
       <a class="text-blue-700 underline" href={`${base}/`}>{$t('editorRecovery.back')}</a>
-    {:else if importingCapture}
-      <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
-      <p class="text-gray-400">{$t('editorRecovery.importing')}</p>
     {:else}
       <p class="text-gray-400">{$t('editorRecovery.loading')}</p>
     {/if}
-  </div>
-{/if}
-
-<!-- iOS capture import error toast -->
-{#if importError}
-  <div class="fixed top-16 left-1/2 -translate-x-1/2 z-[100] w-[calc(100vw-2rem)] max-w-md bg-red-50 border border-red-200 text-red-700 rounded-lg shadow-lg px-4 py-3 flex items-start gap-3" role="alert">
-    <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-    <div class="flex-1 text-sm">
-      <p class="font-semibold">{$t('editorRecovery.failed')}</p>
-      <p>{importError instanceof CaptureImportError ? $t(importError.key, importError.variables) : importError}</p>
-    </div>
-    <button class="text-red-400 hover:text-red-600 text-lg leading-none" onclick={() => importError = null} aria-label={$t('editorRecovery.dismiss')}>✕</button>
   </div>
 {/if}

@@ -9,7 +9,6 @@ import { getModelFile } from '$lib/utils/furnitureModelFiles';
 import { disposeModel } from '$lib/utils/furnitureModelResources';
 import { projectPackageBytes, readProjectPackage } from '$lib/services/projectPackage';
 import { jsonBytes, packageJSON, readPackageZip, writePackageZip } from '$lib/utils/projectPackageZip';
-import { createProjectFromRoomPlan } from '$lib/utils/roomplanImport';
 import { createLocalStore } from '$lib/services/datastore';
 import { roomProject } from './fixtures/project';
 import { mockStorage } from './fixtures/indexeddb';
@@ -105,12 +104,6 @@ it('exporting older saved projects cannot turn retained native categories into c
   const moved = project.floors[0].furniture.splice(2, 1)[0]; project.floors[1].furniture.push(moved);
   const movedPlan = packageJSON(readPackageZip(projectPackageBytes(project))['plan.json']);
   expect(movedPlan.furniture.find((f: any) => f.id === moved.id)).toMatchObject({ category: 'bed', width: 1.21875, level: project.floors[1].level });
-});
-it('uses the same mappings for RoomPlan JSON including original unknown names', () => {
-  const source = JSON.parse(readFileSync('tests/fixtures/handoff-roomplan.json', 'utf8'));
-  source.objects = cases.cases.filter(row => row.category).map((row, i) => ({ identifier: `category-${i}`, category: { [row.category]: {} }, dimensions: [row.widthCm / 100, 0.9, 0.83125], transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, i, 0, 0, 1] }));
-  const project = createProjectFromRoomPlan(source, 'Categories');
-  expect(project.floors.flatMap(f => f.furniture).map(f => f.catalogId)).toEqual(cases.cases.filter(row => row.category).map(row => row.catalogId));
 });
 it('renders stairs and unknown objects with bounded procedural geometry and no model files', () => {
   for (const id of ['stairs', 'imported_object']) {

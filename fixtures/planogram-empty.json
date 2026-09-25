@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "unit": "mm",
+  "name": "Пустая планограмма (1 стеллаж)",
+  "category": "Мыло",
+  "store_format": "Дроггери",
+  "promo_mode": false,
+  "shelf_units": [
+    {
+      "id": "shelf-1",
+      "label": "Стеллаж основной",
+      "width_mm": 900,
+      "depth_mm": 400,
+      "height_mm": 1800,
+      "shelf_count": 5,
+      "mount": "shelf"
+    }
+  ],
+  "sku_facings": []
+}

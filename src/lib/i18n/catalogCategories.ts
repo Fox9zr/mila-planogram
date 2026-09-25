@@ -21,7 +21,8 @@ export const catalogCategoryLabels: Record<string, TranslationKey> = {
   "Imported": "catalogCategories.imported",
   "Outdoor Lighting": "catalogCategories.outdoorLighting",
   "Paths & Lawns": "catalogCategories.pathsLawns",
-  "Pool & Spa": "catalogCategories.poolSpa"
+  "Pool & Spa": "catalogCategories.poolSpa",
+  "Mila Стеллажи": "catalogCategories.milaEquipment"
 };
 
 export function normalizeCatalogSearch(value: string): string {

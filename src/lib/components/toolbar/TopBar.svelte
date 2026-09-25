@@ -19,7 +19,6 @@
   import type { Floor } from '$lib/models/types';
   import { exportAsJSON, exportAsSVG } from '$lib/utils/export';
   import { exportDXF, exportDWG } from '$lib/utils/cadExport';
-  import { createProjectFromRoomPlan, extractRoomJsonFromZip, isRoomPlanJson } from '$lib/utils/roomplanImport';
   import SettingsDialog from './SettingsDialog.svelte';
   import AreaSummaryPanel from '$lib/components/sidebar/AreaSummaryPanel.svelte';
   import { saveState, saveError, lastSavedAt, manualSave, autoSave, initAutoSave } from '$lib/stores/saveStatus';
@@ -281,18 +280,14 @@
     importError = null;
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json,.zip';
+    // Phase 1.4: RoomPlan .zip captures are no longer accepted; only editable plan JSON.
+    input.accept = '.json';
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
       try {
         await openProject(async () => {
-          const data = /\.zip$/i.test(file.name)
-            ? await extractRoomJsonFromZip(file)
-            : JSON.parse(await file.text());
-          return isRoomPlanJson(data)
-            ? createProjectFromRoomPlan(data, file.name.replace(/\.(json|zip)$/i, ''))
-            : data;
+          return JSON.parse(await file.text());
         }, 'import', openingLifetime.signal);
       } catch (e: any) {
         const message = e?.message ?? 'Could not read this file.';
