@@ -1,5 +1,10 @@
 # Local project persistence (mila-planogram)
 
+> **AGENT-NOTE (Phase 1.1 deviation, approved):** plan step 1.1 said "localStorage provider";
+> implementation deliberately keeps the existing local `DataStore` over **IndexedDB** (same
+> interface, larger quota, already battle-tested). Local-only requirement is met; localStorage
+> itself is not used. Documented per GSD deviation rules.
+
 ## What is already true
 
 `openPlan3D` never synced projects to a remote service. The only persistence path is local
