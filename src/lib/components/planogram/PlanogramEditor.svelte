@@ -86,17 +86,28 @@
   let unitById = $derived(new Map(planogram.shelf_units.map((u) => [u.id, u])));
 
   let violations = $derived(validatePlanogramBounds(planogram));
+  // AGENT-NOTE: ключ включает shelf_no — иначе один SKU на двух полках получал бы рамку на обеих (ревью Phase 2).
+  const violationKey = (shelfUnitId: string, shelfNo: number, sku: string) => `${shelfUnitId}|${shelfNo}|${sku}`;
   let violationKeys = $derived(
-    new Set(violations.map((v) => `${v.shelf_unit_id}${'|'}${v.sku}`)),
+    new Set(violations.map((v) => violationKey(v.shelf_unit_id, v.shelf_no ?? 0, v.sku))),
   );
-  let violationDetail = $derived(new Map(violations.map((v) => [`${v.shelf_unit_id}|${v.sku}`, v.detail])));
+  let violationDetail = $derived(
+    new Map(violations.map((v) => [violationKey(v.shelf_unit_id, v.shelf_no ?? 0, v.sku), v.detail])),
+  );
 
   function warningFor(facing: SkuFacing): string | null {
-    return warnings[facingKey(facing)] ?? violationDetail.get(`${facing.shelf_unit_id}|${facing.sku}`) ?? null;
+    return (
+      warnings[facingKey(facing)] ??
+      violationDetail.get(violationKey(facing.shelf_unit_id, facing.shelf_no, facing.sku)) ??
+      null
+    );
   }
 
   function isInvalid(facing: SkuFacing): boolean {
-    return violationKeys.has(`${facing.shelf_unit_id}|${facing.sku}`) || Boolean(warnings[facingKey(facing)]);
+    return (
+      violationKeys.has(violationKey(facing.shelf_unit_id, facing.shelf_no, facing.sku)) ||
+      Boolean(warnings[facingKey(facing)])
+    );
   }
 
   function facingAt(key: string): SkuFacing | undefined {
