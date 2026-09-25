@@ -25,13 +25,31 @@
     facingsOnShelf,
     clampFacingToShelf,
     snapFacingX,
+    overshootWarning,
     PROMO_GRID_MM,
   } from '$lib/planogram/geometry';
   import { validatePlanogramBounds } from '$lib/planogram/validateBounds';
+  import {
+    parsePlanogram,
+    serializePlanogram,
+    semanticEqual,
+    fromEditorModel,
+    PlanogramParseError,
+  } from '$lib/planogram/serialize';
   import ShelfUnit2D from './ShelfUnit2D.svelte';
   import SkuFacing2D from './SkuFacing2D.svelte';
 
-  let { planogram, fixtureName = 'planogram' }: { planogram: Planogram; fixtureName?: string } = $props();
+  let {
+    planogram: initialPlanogram,
+    fixtureName = 'planogram',
+  }: { planogram: Planogram; fixtureName?: string } = $props();
+
+  /**
+   * The edited document. It must be `$state` (deep proxy) — mutating a plain
+   * prop object would update nothing on screen. The route hands over a private
+   * clone of the fixture, so the fixture module is never touched.
+   */
+  let planogram = $state<Planogram>(initialPlanogram);
 
   const PX_PER_MM = 0.32;
   const MARGIN_MM = 150;
@@ -125,8 +143,9 @@
       (f) => facingKey(f) !== drag!.key,
     );
     const promoMode = Boolean(planogram.promo_mode);
+    const requestedMm = drag.startXMm + deltaMm;
     const snapped = snapFacingX({
-      rawX: drag.startXMm + deltaMm,
+      rawX: requestedMm,
       span: drag.span,
       unit,
       neighbours,
@@ -135,7 +154,10 @@
     const clamped = clampFacingToShelf({ ...facing, x_mm: snapped.x_mm }, unit);
 
     facing.x_mm = clamped.facing.x_mm;
-    if (clamped.warning) warnings = { ...warnings, [drag.key]: clamped.warning };
+    // Snapping already pulls the facing back to the edge, so the overshoot is
+    // reported from the *requested* position — the clamp must never be silent.
+    const warning = clamped.warning ?? overshootWarning(unit, drag.span, requestedMm);
+    if (warning) warnings = { ...warnings, [drag.key]: warning };
     else {
       const next = { ...warnings };
       delete next[drag.key];
@@ -151,6 +173,55 @@
     if (event) svg?.releasePointerCapture?.(event.pointerId);
     drag = null;
     dragKey = null;
+  }
+
+  // ── Serialization (2.4): editor ⇄ Planogram JSON ────────────────────────
+  let savedJson = $state<string | null>(null);
+  let loadError = $state<string | null>(null);
+  let jsonText = $state('');
+  let lastSavedAt = $state<string | null>(null);
+
+  /** Editor model → JSON in canonical schema key order. */
+  let serialized = $derived(
+    serializePlanogram(fromEditorModel({ planogram, promoMode: Boolean(planogram.promo_mode) })),
+  );
+
+  /** Round-trip criterion: semantic deepEqual after normalize + reserialize. */
+  let roundTripOk = $derived.by(() => {
+    try {
+      return semanticEqual(parsePlanogram(serialized), fromEditorModel({ planogram, promoMode: Boolean(planogram.promo_mode) }));
+    } catch {
+      return false;
+    }
+  });
+
+  function saveJson() {
+    loadError = null;
+    savedJson = serialized;
+    jsonText = serialized;
+    lastSavedAt = new Date().toISOString();
+  }
+
+  /** JSON → editor: the parsed document replaces the edited one in place. */
+  function loadJson(text: string) {
+    try {
+      const next = parsePlanogram(text);
+      planogram.name = next.name;
+      planogram.category = next.category;
+      planogram.store_format = next.store_format;
+      if (next.created_at === undefined) delete planogram.created_at;
+      else planogram.created_at = next.created_at;
+      planogram.promo_mode = Boolean(next.promo_mode);
+      planogram.shelf_units = next.shelf_units;
+      planogram.sku_facings = next.sku_facings;
+      selectedKey = null;
+      warnings = {};
+      loadError = null;
+      return true;
+    } catch (error) {
+      loadError = error instanceof PlanogramParseError ? error.issues.join('; ') : String(error);
+      return false;
+    }
   }
 
   function selectFacing(facing: SkuFacing) {
@@ -186,6 +257,13 @@
     <span class="violations" data-testid="violation-count" data-count={violations.length}>
       нарушений границ: {violations.length}
     </span>
+    <button type="button" data-testid="save-json" onclick={saveJson}>Сохранить JSON</button>
+    <span
+      class="roundtrip"
+      data-testid="roundtrip-status"
+      data-ok={roundTripOk ? 'true' : 'false'}
+      data-saved-at={lastSavedAt ?? ''}
+    >round-trip (семантический deepEqual): {roundTripOk ? 'OK' : 'ОШИБКА'}</span>
   </header>
 
   <svg
@@ -198,7 +276,6 @@
     onpointermove={onPointerMove}
     onpointerup={endDrag}
     onpointercancel={endDrag}
-    onpointerleave={endDrag}
   >
     {#each planogram.shelf_units as unit (unit.id)}
       {@const origin = layout.units.find((u) => u.id === unit.id)?.x0 ?? 0}
@@ -219,6 +296,26 @@
       {/each}
     {/each}
   </svg>
+
+  <section class="json" data-testid="json-panel">
+    <label for="planogram-json-input">Planogram JSON (schema v1, мм)</label>
+    <textarea
+      id="planogram-json-input"
+      data-testid="planogram-json-input"
+      rows="8"
+      bind:value={jsonText}
+      placeholder="Вставьте планограмму JSON и нажмите «Загрузить JSON»"
+    ></textarea>
+    <div class="json-actions">
+      <button type="button" data-testid="load-json" onclick={() => loadJson(jsonText)}>Загрузить JSON</button>
+    </div>
+    {#if loadError}
+      <p class="error" data-testid="json-error">{loadError}</p>
+    {/if}
+    {#if savedJson}
+      <pre data-testid="planogram-json">{savedJson}</pre>
+    {/if}
+  </section>
 
   <aside class="inspector" data-testid="facing-inspector">
     {#if selected}
@@ -250,7 +347,7 @@
 <style>
   .planogram-editor {
     display: grid;
-    grid-template-columns: 1fr 280px;
+    grid-template-columns: minmax(0, 1fr) 280px;
     gap: 12px;
     padding: 12px;
     background: #f8fafc;
@@ -295,6 +392,35 @@
   .inspector input {
     width: 100%;
     margin-top: 4px;
+  }
+  .json {
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .json textarea {
+    width: 100%;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+  }
+  .json pre {
+    max-height: 220px;
+    overflow: auto;
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .json .error {
+    color: #b91c1c;
+    font-weight: 600;
+  }
+  .roundtrip[data-ok='false'] {
+    color: #b91c1c;
+    font-weight: 600;
   }
   .violations[data-count]:not([data-count='0']) {
     color: #b91c1c;
