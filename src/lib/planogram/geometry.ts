@@ -113,6 +113,22 @@ export function clampFacingToShelf(facing: SkuFacing, unit: ShelfUnit): ClampRes
   return { facing, clamped: false, warning: null };
 }
 
+/**
+ * Explain a drag that ran past a shelf edge. Snapping keeps the facing on the
+ * shelf, so the clamp alone would stay silent — this message is what the red
+ * frame and the tooltip show instead.
+ */
+export function overshootWarning(unit: ShelfUnit, span: number, requestedMm: number): string | null {
+  const max = maxFacingX(unit, span);
+  if (requestedMm < 0) {
+    return `Левый край полки: 0 мм — фейсинг упёрся в край (запрошено ${Math.round(requestedMm)} мм)`;
+  }
+  if (requestedMm > max) {
+    return `Правый край полки: ${unit.width_mm} мм — фейсинг упёрся в край (запрошено ${Math.round(requestedMm)} мм)`;
+  }
+  return null;
+}
+
 export interface SnapInput {
   /** Requested position before snapping, mm. */
   rawX: number;

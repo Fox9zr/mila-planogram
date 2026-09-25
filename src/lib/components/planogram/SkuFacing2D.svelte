@@ -69,6 +69,7 @@
   />
   {#if !showPlaceholder}
     <image
+      class="overlay"
       data-testid="facing-image"
       href={imageUrl}
       x={rectX + 1}
@@ -80,7 +81,7 @@
     />
   {/if}
   {#if showPlaceholder}
-    <g data-testid="facing-placeholder" class="placeholder">
+    <g data-testid="facing-placeholder" class="placeholder overlay">
       <rect
         x={rectX + 1}
         y={rectY + 1}
@@ -106,7 +107,7 @@
   {/each}
 
   {#if warning}
-    <g data-testid="bounds-tooltip" class="tooltip">
+    <g data-testid="bounds-tooltip" class="tooltip overlay">
       <rect x={rectX} y={tooltipY - 18} width={Math.max(220, warning.length * 6.5)} height="24" rx="4" />
       <text x={rectX + 8} y={tooltipY - 2} font-size="12">{warning}</text>
     </g>
@@ -114,6 +115,12 @@
 </g>
 
 <style>
+  /* Only the pack rectangle may take pointer input: the picture, the SKU
+     placeholder and the tooltip are overlays and must not block dragging. */
+  .overlay,
+  .separator {
+    pointer-events: none;
+  }
   .pack {
     fill: rgba(59, 130, 246, 0.12);
     stroke: #2563eb;
