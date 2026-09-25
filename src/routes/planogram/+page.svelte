@@ -9,9 +9,11 @@
   import PlanogramEditor from '$lib/components/planogram/PlanogramEditor.svelte';
   import type { Planogram } from '$lib/planogram/types';
   import soapFixture from '../../../fixtures/planogram-soap.json';
+  import soapRealFixture from '../../../fixtures/planogram-soap-real.json';
   import emptyFixture from '../../../fixtures/planogram-empty.json';
 
-  let fixtureName = $derived(page.url.searchParams.get('fixture') === 'empty' ? 'empty' : 'soap');
+  let fixtureName = $derived((['soap', 'soap-real', 'empty'] as const).includes(page.url.searchParams.get('fixture') as 'soap') ? page.url.searchParams.get('fixture')! : 'soap');
+  const fixtures: Record<string, unknown> = { soap: soapFixture, 'soap-real': soapRealFixture, empty: emptyFixture };
 
   /** Fixtures are module-level objects: hand the editor a private copy. */
   function clone(source: unknown): Planogram {
@@ -28,13 +30,16 @@
     <a href="/planogram?fixture=soap" data-testid="fixture-soap" class:active={fixtureName === 'soap'}>
       Мыло (fixture soap)
     </a>
+    <a href="/planogram?fixture=soap-real" data-testid="fixture-soap-real" class:active={fixtureName === 'soap-real'}>
+      Мыло — реальные ВГХ Mila
+    </a>
     <a href="/planogram?fixture=empty" data-testid="fixture-empty" class:active={fixtureName === 'empty'}>
       Пустая планограмма
     </a>
   </nav>
   {#key fixtureName}
     <PlanogramEditor
-      planogram={clone(fixtureName === 'empty' ? emptyFixture : soapFixture)}
+      planogram={clone(fixtures[fixtureName] ?? soapFixture)}
       {fixtureName}
     />
   {/key}
