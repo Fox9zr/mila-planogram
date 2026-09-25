@@ -4,11 +4,10 @@
   onMount(initializeLocale);
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
-  import { env } from '$env/dynamic/public';
   import { themePreference } from '$lib/stores/theme';
   import DeploymentNotice from '$lib/components/DeploymentNotice.svelte';
-  // Self-hosted instances and browser tests can run without sending analytics.
-  onMount(() => { if (window.location.pathname !== '/render-lab' && env.PUBLIC_ENABLE_ANALYTICS !== 'false') void import('$lib/firebase'); });
+  // Phase 1.2: the Firebase analytics bootstrap was removed with the rest of the
+  // Firebase footprint. The app has no remote runtime dependency.
   let { children } = $props();
 </script>
 
