@@ -922,7 +922,6 @@ export const en = {
   "shortcuts.walls": "Walls",
   "shortcuts.select": "Select tool",
   "shortcuts.wall": "Wall tool",
-  "shortcuts.door": "Door tool",
   "shortcuts.pan": "Pan mode",
   "shortcuts.measure": "Measure tool",
   "shortcuts.annotate": "Annotate tool",

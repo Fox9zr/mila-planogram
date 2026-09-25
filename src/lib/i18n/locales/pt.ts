@@ -922,7 +922,6 @@ export const pt = {
   "shortcuts.walls": "Paredes",
   "shortcuts.select": "Ferramenta de seleção",
   "shortcuts.wall": "Ferramenta de parede",
-  "shortcuts.door": "Ferramenta de porta",
   "shortcuts.pan": "Modo de deslocamento",
   "shortcuts.measure": "Ferramenta de medição",
   "shortcuts.annotate": "Ferramenta de cotas",

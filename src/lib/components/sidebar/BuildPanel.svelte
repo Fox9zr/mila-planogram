@@ -20,6 +20,8 @@
   import CustomModelPanel from './CustomModelPanel.svelte';
   import { createProjectFromRoomPlan, extractRoomJsonFromZip, roomPlanImportOptions, validateRoomPlan, ORTHO_VERSION } from '$lib/utils/roomplanImport';
   import { currentProject } from '$lib/stores/project';
+  // Phase 1.3: doors, windows and stairs are residential-domain tools and stay off.
+  import { RESIDENTIAL_DOMAIN_ENABLED } from '$lib/planogram/domainTrim';
 
   const openingLifetime = new AbortController();
   onDestroy(() => openingLifetime.abort());
@@ -29,6 +31,8 @@
   // AreaSummaryPanel moved to top bar dialog
   let activeTab = $state<'draw' | 'rooms' | 'objects'>('draw');
   let constructionOpen = $state(true);
+  /** Residential openings/stairs UI is hidden while the residential domain is out. */
+  const residentialToolsEnabled = RESIDENTIAL_DOMAIN_ENABLED;
   let selectedCategory = $state<string>('All');
   // RoomPlan import dialog state
   let showImportDialog = $state(false);
@@ -39,6 +43,9 @@
   let optMergeDistance = $state(15);
 
   function setTool(tool: Tool) {
+    // Phase 1.3: residential tools (door/window) are never activated while the
+    // residential domain is out — fall back to selection instead.
+    if (!residentialToolsEnabled && (tool === 'door' || tool === 'window')) tool = 'select';
     if (tool === 'measure' || tool === 'annotate') activateMeasurementTool(tool);
     else selectedTool.set(tool);
     placingFurnitureId.set(null);
@@ -396,19 +403,21 @@
           </div>
         </button>
 
-        <h3 class="text-xs font-semibold text-gray-400 uppercase mb-2 mt-3">{$t('buildTools.structure')}</h3>
-        <button
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {isPlacingStair ? 'bg-blue-50 text-slate-800 ring-1 ring-blue-200' : 'hover:bg-gray-50 text-gray-700'}"
-          onclick={onPlaceStair}
-        >
-          <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center {isPlacingStair ? 'bg-blue-100' : ''}">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 5h-5V2h-3v6h-4V5H7v6H2v3h5v3h3v-3h4v3h3v-6h5z"/></svg>
-          </div>
-          <div class="text-left">
-            <div class="font-medium">{$t('buildTools.stairs')}</div>
-            <div class="text-xs text-gray-400">{$t('buildTools.stairsHelp')}</div>
-          </div>
-        </button>
+        {#if residentialToolsEnabled}
+          <h3 class="text-xs font-semibold text-gray-400 uppercase mb-2 mt-3">{$t('buildTools.structure')}</h3>
+          <button
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {isPlacingStair ? 'bg-blue-50 text-slate-800 ring-1 ring-blue-200' : 'hover:bg-gray-50 text-gray-700'}"
+            onclick={onPlaceStair}
+          >
+            <div class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center {isPlacingStair ? 'bg-blue-100' : ''}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 5h-5V2h-3v6h-4V5H7v6H2v3h5v3h3v-3h4v3h3v-6h5z"/></svg>
+            </div>
+            <div class="text-left">
+              <div class="font-medium">{$t('buildTools.stairs')}</div>
+              <div class="text-xs text-gray-400">{$t('buildTools.stairsHelp')}</div>
+            </div>
+          </button>
+        {/if}
 
         <div class="flex gap-2">
           <button
@@ -500,6 +509,7 @@
           </div>
         </button>
 
+        {#if residentialToolsEnabled}
         <button
           class="w-full flex items-center justify-between px-1 py-2 mt-3"
           onclick={() => constructionOpen = !constructionOpen}
@@ -543,6 +553,7 @@
               </button>
             {/each}
           </div>
+        {/if}
         {/if}
       </div>
 
