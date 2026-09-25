@@ -2,7 +2,6 @@
   import { t } from '$lib/i18n';
   import { templateLabels } from '$lib/i18n/templateLabels';
   import { onDestroy } from 'svelte';
-  import { isRoomPlanJson } from '$lib/utils/roomplanValidation';
   import { openProject } from '$lib/services/projectOpening';
   import ImportError from '$lib/components/ImportError.svelte';
   import { goto } from '$app/navigation';
@@ -60,10 +59,7 @@
     importError = null;
     try {
       const project = await openProject(async () => {
-        const data = JSON.parse(await file.text());
-        return isRoomPlanJson(data)
-          ? (await import('$lib/utils/roomplanImport')).createProjectFromRoomPlan(data, file.name.replace(/\.json$/i, ''))
-          : data;
+        return JSON.parse(await file.text());
       }, 'import', openingLifetime.signal);
       if (!project) return;
       markSeen();

@@ -1,7 +1,5 @@
 import { expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { detectOuterWalls, getOuterWalls } from '$lib/utils/outerWalls';
-import { createProjectFromRoomPlan, DEFAULT_ROOMPLAN_OPTIONS } from '$lib/utils/roomplanImport';
 import { detectRooms } from '$lib/utils/roomDetection';
 import type { Wall, Point } from '$lib/models/types';
 
@@ -32,15 +30,6 @@ it('retains open sketches when no enclosed rooms can establish an exterior', () 
   for (const count of [1, 2, 3]) {
     const walls = rectangle().slice(0, count);
     expect(getOuterWalls(walls)).toEqual(walls);
-  }
-});
-
-it.each(['test-roomplan.json', 'static/test-roomplan-multiroom.json'])('keeps a usable envelope for the capture fixture %s', file => {
-  const project = createProjectFromRoomPlan(JSON.parse(readFileSync(file, 'utf8')), file, DEFAULT_ROOMPLAN_OPTIONS);
-  for (const floor of project.floors) {
-    const ids = detectOuterWalls(floor.walls);
-    expect(ids.size).toBeGreaterThan(0);
-    expect([...ids].every(id => floor.walls.some(w => w.id === id))).toBe(true);
   }
 });
 
