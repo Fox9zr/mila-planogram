@@ -20,6 +20,12 @@ export const EDGE_SNAP_MM = 25;
 export const POST_MM = 40;
 /** Shelf deck thickness used by the side projection, mm. */
 export const DECK_MM = 20;
+/** Hook rail thickness used by the 3D preview, mm (Phase 3.2). */
+export const HOOK_RAIL_MM = 30;
+/** Horizontal gap between racks on drawings and in the 3D scene, mm. */
+export const RACK_GAP_MM = 300;
+/** Nominal package depth for the 3D preview — the schema carries no SKU depth. */
+export const PACK_DEPTH_MM = 120;
 
 /** Canonical mm → scene(pixel) conversion. All rendering must use this. */
 export function mmToScene(mm: number, pxPerMm = 1): number {
