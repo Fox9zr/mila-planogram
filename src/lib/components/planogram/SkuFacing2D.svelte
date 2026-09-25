@@ -87,11 +87,21 @@
         y={rectY + 1}
         width={Math.max(0, rectW - 2)}
         height={Math.max(0, rectH - 2)}
-        fill="#f1f5f9"
+        fill={(facing as any).color ?? '#f1f5f9'}
+        fill-opacity="0.85"
       />
-      <text x={rectX + rectW / 2} y={rectY + rectH / 2} text-anchor="middle" dominant-baseline="middle" font-size={labelSize}>
-        {facing.sku}
-      </text>
+      {#if rectH > 26 && rectW > 46}
+        <text x={rectX + rectW / 2} y={rectY + rectH * 0.4} text-anchor="middle" dominant-baseline="middle" font-size={labelSize} fill="#0f172a" font-weight="600">
+          {(facing as any).brand ?? ''}
+        </text>
+        <text x={rectX + rectW / 2} y={rectY + rectH * 0.68} text-anchor="middle" dominant-baseline="middle" font-size={labelSize * 0.8} fill="#1e293b">
+          {(facing as any).name ?? facing.sku}
+        </text>
+      {:else}
+        <text x={rectX + rectW / 2} y={rectY + rectH / 2} text-anchor="middle" dominant-baseline="middle" font-size={Math.max(7, labelSize * 0.75)} fill="#0f172a">
+          {(facing as any).brand ?? facing.sku}
+        </text>
+      {/if}
     </g>
   {/if}
 
