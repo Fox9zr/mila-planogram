@@ -1,16 +1,20 @@
 import { derived, writable } from 'svelte/store';
 import { en } from './locales/en';
 import { pt } from './locales/pt';
+import { ru } from './locales/ru';
 
-export type Locale = 'en' | 'pt';
+export type Locale = 'en' | 'pt' | 'ru';
 export type TranslationKey = keyof typeof en;
-const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, pt };
+/** `en` is complete; `pt` and `ru` are translated per key with an English fallback. */
+const dictionaries: Record<Locale, Partial<Record<TranslationKey, string>>> = { en, pt, ru };
 const preference = writable<Locale>('en');
-const isLocale = (value: unknown): value is Locale => value === 'en' || value === 'pt';
+const isLocale = (value: unknown): value is Locale => value === 'en' || value === 'pt' || value === 'ru';
 
 export function translate(language: Locale, key: TranslationKey, variables: Record<string, string | number> = {}): string {
+  // Partial dictionaries (ru) fall back to English so a missing key never renders blank.
+  const template = dictionaries[language][key] ?? en[key];
   // Single-pass substitution preserves literal braces in user-provided values.
-  return dictionaries[language][key].replace(/\{(\w+)\}/g, (token, name) =>
+  return template.replace(/\{(\w+)\}/g, (token, name) =>
     Object.hasOwn(variables, name) ? String(variables[name]) : token);
 }
 

@@ -623,6 +623,7 @@ export const en = {
   "catalogCategories.outdoorLighting": "Outdoor Lighting",
   "catalogCategories.pathsLawns": "Paths & Lawns",
   "catalogCategories.poolSpa": "Pool & Spa",
+  "catalogCategories.milaEquipment": "Mila Shelving",
   "entourageLabels.title": "Entourage",
   "entourageLabels.people": "People",
   "entourageLabels.vehicles": "Vehicles",

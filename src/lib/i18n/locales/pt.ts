@@ -623,6 +623,7 @@ export const pt = {
   "catalogCategories.outdoorLighting": "Iluminação externa",
   "catalogCategories.pathsLawns": "Caminhos e gramados",
   "catalogCategories.poolSpa": "Piscinas e spas",
+  "catalogCategories.milaEquipment": "Estantes Mila",
   "entourageLabels.title": "Elementos de entorno",
   "entourageLabels.people": "Pessoas",
   "entourageLabels.vehicles": "Veículos",
