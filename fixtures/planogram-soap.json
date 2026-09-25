@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "unit": "mm",
+  "name": "Тест: Мыло, формат Дроггери",
+  "category": "Мыло",
+  "store_format": "Дроггери",
+  "created_at": "2026-09-25T12:00:00+03:00",
+  "promo_mode": false,
+  "shelf_units": [
+    {
+      "id": "shelf-1",
+      "label": "Стеллаж основной 5 полок",
+      "width_mm": 900,
+      "depth_mm": 400,
+      "height_mm": 1800,
+      "shelf_count": 5,
+      "mount": "shelf"
+    }
+  ],
+  "sku_facings": [
+    { "sku": "SYN-0001", "name": "Мыло детское 90г", "image_url": "", "shelf_unit_id": "shelf-1", "shelf_no": 1, "x_mm": 0,   "width_mm": 60, "height_mm": 120, "facings": 3 },
+    { "sku": "SYN-0002", "name": "Мыло хоз. 200г",  "image_url": "", "shelf_unit_id": "shelf-1", "shelf_no": 1, "x_mm": 180, "width_mm": 70, "height_mm": 130, "facings": 2 },
+    { "sku": "SYN-0003", "name": "Гель для душа",   "image_url": "", "shelf_unit_id": "shelf-1", "shelf_no": 3, "x_mm": 100, "width_mm": 80, "height_mm": 220, "facings": 4 },
+    { "sku": "SYN-0004", "name": "Крем-мыло",       "image_url": "", "shelf_unit_id": "shelf-1", "shelf_no": 5, "x_mm": 500, "width_mm": 75, "height_mm": 150, "facings": 2 }
+  ]
+}

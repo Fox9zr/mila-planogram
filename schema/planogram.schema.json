@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fox9zr.github.io/mila-planogram/planogram.schema.json",
+  "title": "Mila Planogram",
+  "description": "Планограмма Mila: стеллажи и SKU-фейсинги. Координаты: origin = левый-нижний угол стеллажа, ось X — вдоль полки. Единица измерения — миллиметры (unit=mm).",
+  "type": "object",
+  "required": ["version", "unit", "name", "category", "store_format", "shelf_units", "sku_facings"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "unit": { "const": "mm" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "category": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "store_format": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "promo_mode": { "type": "boolean", "default": false, "description": "Акционный режим: сетка 10 см, прогноз вместо факта" },
+    "shelf_units": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/shelf_unit" }
+    },
+    "sku_facings": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/sku_facing" }
+    }
+  },
+  "definitions": {
+    "shelf_unit": {
+      "type": "object",
+      "required": ["id", "width_mm", "depth_mm", "height_mm", "shelf_count", "mount"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "width_mm": { "type": "integer", "minimum": 300, "maximum": 3000 },
+        "depth_mm": { "type": "integer", "minimum": 200, "maximum": 1200 },
+        "height_mm": { "type": "integer", "minimum": 1000, "maximum": 3000 },
+        "shelf_count": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "mount": { "enum": ["shelf", "hook"] },
+        "shelf_heights_mm": {
+          "type": "array",
+          "description": "Высоты полок от пола, мм; если пусто — равномерное распределение",
+          "items": { "type": "integer", "minimum": 50, "maximum": 3000 }
+        }
+      }
+    },
+    "sku_facing": {
+      "type": "object",
+      "required": ["sku", "shelf_unit_id", "shelf_no", "x_mm", "width_mm", "height_mm", "facings"],
+      "additionalProperties": false,
+      "properties": {
+        "sku": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "image_url": { "type": "string" },
+        "shelf_unit_id": { "type": "string", "minLength": 1 },
+        "shelf_no": { "type": "integer", "minimum": 1 },
+        "x_mm": { "type": "integer", "minimum": 0 },
+        "width_mm": { "type": "integer", "minimum": 10, "maximum": 1000 },
+        "height_mm": { "type": "integer", "minimum": 10, "maximum": 1000 },
+        "facings": { "type": "integer", "minimum": 1, "maximum": 99 }
+      }
+    }
+  }
+}
