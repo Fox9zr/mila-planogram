@@ -195,6 +195,10 @@ export const portugueseFurnitureNames: Readonly<Record<string, string>> = {
   "sym_gas_line": "Tubulação de gás",
   "imported_object": "Item não reconhecido",
   "stairs": "Escada importada",
+  // Retail shelf units (Phase 1.5).
+  "mila_rack_900_400_1800": "Estante Mila 900×400×1800 (5 prateleiras)",
+  "mila_rack_1200_400_1800": "Estante Mila 1200×400×1800 (5 prateleiras)",
+  "mila_rack_600_300_1600": "Estante Mila 600×300×1600 (4 prateleiras)",
 };
 
 export function furnitureName(id: string, language: Locale): string {
