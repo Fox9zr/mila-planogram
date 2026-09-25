@@ -38,6 +38,8 @@
   } from '$lib/planogram/serialize';
   import ShelfUnit2D from './ShelfUnit2D.svelte';
   import SkuFacing2D from './SkuFacing2D.svelte';
+  import ShelfUnit3D from './ShelfUnit3D.svelte';
+  import { exportPlanogramPDF } from '$lib/planogram/pdfExport';
 
   let {
     planogram: initialPlanogram,
@@ -248,6 +250,41 @@
     if (!Number.isFinite(parsed)) return;
     facing.x_mm = parsed; // deliberately unclamped: bounds show up as a red frame
   }
+
+  // ── Phase 3: 2D/3D-переключение и экспорт PDF ───────────────────────────
+  let viewMode = $state<'2d' | '3d'>('2d');
+
+  type PdfState = {
+    status: 'idle' | 'busy' | 'ok' | 'error';
+    filename?: string;
+    bytes?: number;
+    fontEmbedded?: boolean;
+    error?: string;
+  };
+  let pdfState = $state<PdfState>({ status: 'idle' });
+
+  /** Снимок документа: экспорт не должен читать реактивный прокси на ходу. */
+  function documentSnapshot(): Planogram {
+    return JSON.parse(
+      JSON.stringify(fromEditorModel({ planogram, promoMode: Boolean(planogram.promo_mode) })),
+    ) as Planogram;
+  }
+
+  async function exportPdf() {
+    if (pdfState.status === 'busy') return;
+    pdfState = { status: 'busy' };
+    try {
+      const result = await exportPlanogramPDF(documentSnapshot());
+      pdfState = {
+        status: 'ok',
+        filename: result.filename,
+        bytes: result.bytes,
+        fontEmbedded: result.fontEmbedded,
+      };
+    } catch (error) {
+      pdfState = { status: 'error', error: error instanceof Error ? error.message : String(error) };
+    }
+  }
 </script>
 
 <div class="planogram-editor" data-testid="planogram-editor" data-fixture={fixtureName}>
@@ -268,6 +305,43 @@
     <span class="violations" data-testid="violation-count" data-count={violations.length}>
       нарушений границ: {violations.length}
     </span>
+    <span class="view-switch" role="group" aria-label="Вид">
+      <button
+        type="button"
+        data-testid="view-2d"
+        class:active={viewMode === '2d'}
+        aria-pressed={viewMode === '2d'}
+        onclick={() => (viewMode = '2d')}>2D</button
+      >
+      <button
+        type="button"
+        data-testid="view-3d"
+        class:active={viewMode === '3d'}
+        aria-pressed={viewMode === '3d'}
+        onclick={() => (viewMode = '3d')}>3D</button
+      >
+    </span>
+    <button type="button" data-testid="export-pdf" disabled={pdfState.status === 'busy'} onclick={exportPdf}>
+      {pdfState.status === 'busy' ? 'Готовим PDF…' : 'Экспорт PDF'}
+    </button>
+    <span
+      class="pdf-status"
+      data-testid="pdf-status"
+      data-state={pdfState.status}
+      data-filename={pdfState.filename ?? ''}
+      data-bytes={pdfState.bytes ?? 0}
+      data-font-embedded={pdfState.fontEmbedded === undefined ? '' : pdfState.fontEmbedded ? 'true' : 'false'}
+    >
+      {#if pdfState.status === 'ok'}
+        PDF готов: {pdfState.filename} · {pdfState.bytes} байт · {pdfState.fontEmbedded
+          ? 'кириллический шрифт встроен'
+          : 'ASCII-транслитерация (шрифт недоступен)'}
+      {:else if pdfState.status === 'error'}
+        Ошибка экспорта: {pdfState.error}
+      {:else if pdfState.status === 'busy'}
+        формируем PDF…
+      {/if}
+    </span>
     <button type="button" data-testid="save-json" onclick={saveJson}>Сохранить JSON</button>
     <span
       class="roundtrip"
@@ -277,6 +351,7 @@
     >round-trip (семантический deepEqual): {roundTripOk ? 'OK' : 'ОШИБКА'}</span>
   </header>
 
+  {#if viewMode === '2d'}
   <svg
     bind:this={svg}
     class="planogram-canvas"
@@ -307,6 +382,11 @@
       {/each}
     {/each}
   </svg>
+  {:else}
+    <div class="view-3d-slot">
+      <ShelfUnit3D {planogram} />
+    </div>
+  {/if}
 
   <section class="json" data-testid="json-panel">
     <label for="planogram-json-input">Planogram JSON (schema v1, мм)</label>
@@ -379,6 +459,29 @@
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     touch-action: none;
+  }
+  .view-3d-slot {
+    grid-column: 1;
+    min-width: 0;
+  }
+  .view-switch {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .view-switch button.active {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: #fff;
+  }
+  .pdf-status {
+    color: #334155;
+  }
+  .pdf-status[data-state='ok'] {
+    color: #15803d;
+  }
+  .pdf-status[data-state='error'] {
+    color: #b91c1c;
+    font-weight: 600;
   }
   .inspector {
     background: #fff;
